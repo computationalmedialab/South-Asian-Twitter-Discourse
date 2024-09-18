@@ -1,0 +1,148 @@
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(stringr)
+library(tm)
+library(tidytext)
+library(ggplot2)
+library(wordcloud)
+library(RColorBrewer)
+
+tweet_data <- All_Tweets_Sheet1
+
+# Define the terms to exclude
+exclude_terms <- c("southasianmentalhealth", "brownmunde", "brownboys", "southasiancommunity", 
+                   "browngirlmagic", "brownisbeautiful", "brownandbeautiful", "brownskin", 
+                   "crownthebrown", "browngirls", "dusky", "duskygirls", "desigirl", "indianskin",
+                   "fairandlovely", "banfairandlovely", "Hajji", "Hadji", "Haji", "Malaun", "Madrasi",
+                   "Curry muncher", "Chee-chee", "American-Born Confused Desi", "Khuli", "Coolie", 
+                   "Koelie", "Kuli", "Khulie", "Cooli", "Cooly", "quli", "Amakhula", "camel jockeys", 
+                   "sand nigger", "sand nigga", "terrorist", "Ayatollah", "paki", "Raghead", "Towelhead", 
+                   "shoe bomber", "sun nigger", "Sun nigga", "coronajihad", "m.e", "i'm", "ah", 
+                   "it's", "bee", "its","la", "1", "2", "3","4","5","6", "7", "8","9", "0","im", 
+                   "don", "im", "it", "you", "i", "i'm", "you're", "u.s", "u", "we")
+
+# Clean the text data by removing the excluded terms
+tweet_data <- tweet_data %>%
+  mutate(text = str_replace_all(text, "\\r|\\n| https://t.co/\\S{10}", " ")) %>%
+  mutate(text = str_replace_all(text, "&amp;", "&")) %>%
+  mutate(text = str_replace_all(text, paste0("\\b(", paste(exclude_terms, collapse = "|"), ")\\b"), "")) %>%
+  mutate(text = str_replace_all(text, "\\s+", " ")) %>% # Remove extra spaces
+  mutate(tweet_id = row_number()) # Add unique identifier for each tweet
+
+# Convert the data to a corpus
+tweet_corpus <- Corpus(VectorSource(tweet_data$text))
+
+# Text preprocessing with tm
+tweet_corpus <- tm_map(tweet_corpus, content_transformer(tolower))
+tweet_corpus <- tm_map(tweet_corpus, removePunctuation)
+tweet_corpus <- tm_map(tweet_corpus, removeNumbers)
+tweet_corpus <- tm_map(tweet_corpus, removeWords, stopwords("english"))
+tweet_corpus <- tm_map(tweet_corpus, stripWhitespace)
+
+# Convert the corpus back to a data frame
+cleaned_text <- data.frame(text = sapply(tweet_corpus, as.character), stringsAsFactors = FALSE)
+tweet_data <- tweet_data %>%
+  mutate(cleaned_text = cleaned_text$text)
+
+# Tokenize the tweets
+tweet_tokenized <- tweet_data %>%
+  unnest_tokens(word, cleaned_text, token = "words", to_lower = TRUE)
+
+# Inspect the tokenized data
+head(tweet_tokenized)
+
+# Get the AFINN lexicon
+afinn_dictionary <- get_sentiments("afinn")
+
+# Join the tokenized data with the AFINN lexicon to get sentiment scores
+word_counts_senti <- tweet_tokenized %>%
+  inner_join(afinn_dictionary, by = "word")
+
+# Summarize sentiment by tweet_id
+tweet_senti <- word_counts_senti %>%
+  group_by(tweet_id) %>%
+  summarize(sentiment = sum(value, na.rm = TRUE))
+
+# Check the result of sentiment summarization
+head(tweet_senti)
+
+# Merge sentiment scores back to the original data
+tweet_data <- tweet_data %>%
+  left_join(tweet_senti, by = "tweet_id")
+
+# Check the result after merging
+head(tweet_data)
+
+# Define threshold value for extreme sentiments
+threshold_value <- 5
+
+# Identify tweets with extreme negative sentiment
+negative_tweets <- tweet_data %>%
+  filter(sentiment < -threshold_value)
+
+# Identify tweets with extreme positive sentiment
+positive_tweets <- tweet_data %>%
+  filter(sentiment > threshold_value)
+
+# View tweets with extreme negative sentiment
+head(negative_tweets)
+
+# View tweets with extreme positive sentiment
+head(positive_tweets)
+
+# Normalize word counts by the number of tweets in each sentiment category
+total_negative <- nrow(negative_tweets)
+total_positive <- nrow(positive_tweets)
+
+# Common words in positive tweets
+positive_common_words <- positive_tweets %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  count(word, sort = TRUE) %>%
+  mutate(freq = n / total_positive) # Normalize by total positive tweets
+
+# View common words in positive tweets
+head(positive_common_words, 40)
+
+# Common words in negative tweets
+negative_common_words <- negative_tweets %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  count(word, sort = TRUE) %>%
+  mutate(freq = n / total_negative) # Normalize by total negative tweets
+
+# View common words in negative tweets
+head(negative_common_words, 40)
+
+# Plot extreme negative sentiments
+ggplot(negative_tweets, aes(x = sentiment)) +
+  geom_histogram(binwidth = 1, fill = "red", color = "black") +
+  labs(title = "Distribution of Extreme Negative Sentiment Tweets", x = "Sentiment Score", y = "Frequency")
+
+# Plot extreme positive sentiments
+ggplot(positive_tweets, aes(x = sentiment)) +
+  geom_histogram(binwidth = 1, fill = "green", color = "black") +
+  labs(title = "Distribution of Extreme Positive Sentiment Tweets", x = "Sentiment Score", y = "Frequency")
+
+# Positive tweets word cloud - display
+wordcloud(words = positive_common_words$word, freq = positive_common_words$freq, max.words = 100, scale = c(2, 0.5), colors = brewer.pal(8, "Blues"))
+
+# Save Positive tweets word cloud
+png("positive_wordcloud.png", width = 1200, height = 800)
+wordcloud(words = positive_common_words$word, freq = positive_common_words$freq, max.words = 100, scale = c(2, 0.5), colors = brewer.pal(8, "Blues"))
+dev.off()  # Close the graphics device
+
+# Negative tweets word cloud - display
+wordcloud(words = negative_common_words$word, freq = negative_common_words$freq, max.words = 100, scale = c(2, 0.5), colors = brewer.pal(8, "Reds"))
+
+# Save Negative tweets word cloud
+png("negative_wordcloud.png", width = 1200, height = 800)
+wordcloud(words = negative_common_words$word, freq = negative_common_words$freq, max.words = 100, scale = c(2, 0.5), colors = brewer.pal(8, "Reds"))
+dev.off()  # Close the graphics device
+
+# Export tweet data to CSV
+#write.csv(tweet_data, file = "tweet_data_processed.csv", row.names = FALSE)
+
+```
+
