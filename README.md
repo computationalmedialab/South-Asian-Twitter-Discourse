@@ -1,6 +1,10 @@
 # South-Asian-Twitter-Discourse
+Data Analysis on X tweets to identify demographic, location, and sentiment trends: Made as a part of the Computational Media Lab
 
-All of the files starting with the name "dataset_tweet-scraper_" are the tweets scraped from each hashtag used in the paper. 
-"All Tweets - Sheet1.csv" contains every tweet and links to where they can be found on X.
-"tweet_data_processed.csv" contains the processed tweet data used in the paper.
-"Normalized Version.rmd" is the R code used for sentiment analysis in the paper.
+## Process
+The following diagram is a nutshell of our evaluation procedure. Corresponding datasets and scripts are attached in this repository with more detailed instructions below.
+
+MAKE AND ADD DIAGRAM
+
+## Data Collection
+We collected data using
