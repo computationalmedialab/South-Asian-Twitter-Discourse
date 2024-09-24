@@ -7,4 +7,5 @@ The following diagram is a nutshell of our evaluation procedure. Corresponding d
 MAKE AND ADD DIAGRAM
 
 ## Data Collection
-We collected data using
+We collected data using [a X Scraper from Apify](https://apify.com/apidojo/tweet-scraper). In order to replicate this project, you will need access to the project data archive. The data is stored in this archive in many spreadsheets with all tweets and their metadata across the search terms used.
+
