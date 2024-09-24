@@ -4,7 +4,7 @@ Data Analysis on X tweets to identify demographic, location, and sentiment trend
 ## Process
 The following diagram is a nutshell of our evaluation procedure. Corresponding datasets and scripts are attached in this repository with more detailed instructions below.
 
-![Process Diagram](Data Timeline.png)
+![Process Diagram](Data_Timeline.png)
 
 ## Data Collection
 We collected data using [a X Scraper from Apify](https://apify.com/apidojo/tweet-scraper). In order to replicate this project, you will need access to the project data archive. The data is stored in this archive in many spreadsheets with all tweets and their metadata across the search terms used.
